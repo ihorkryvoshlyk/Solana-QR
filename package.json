@@ -5,6 +5,9 @@
     "build": "next build",
     "start": "next start"
   },
+  "engines": {
+    "node": ">16.0.0"
+  },
   "dependencies": {
     "@solana/pay": "^0.2.4",
     "@solana/spl-token": "^0.3.7",
