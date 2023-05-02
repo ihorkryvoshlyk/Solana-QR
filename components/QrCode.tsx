@@ -38,6 +38,7 @@ const QrCode: FC<Props> = (props) => {
   // Show the QR code
   useEffect(() => {
     const solanaUrl = encodeURL(urlParams)
+    console.log(solanaUrl)
     const qr = createQR(solanaUrl, 512, 'transparent')
     if (qrRef.current && amount.isGreaterThan(0)) {
       qrRef.current.innerHTML = ''
