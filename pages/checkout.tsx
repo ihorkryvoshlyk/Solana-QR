@@ -180,7 +180,7 @@ export default function Checkout() {
       })
     )
     const { location } = window
-    const apiUrl = `${location.protocol}//${location.host}//api/makeTransaction?token=${tokenString}`
+    const apiUrl = `${location.protocol}//${location.host}/api/makeTransaction?token=${tokenString}`
     const transactionUrl: TransactionRequestURLFields = {
       link: new URL(apiUrl),
       label: params.label,
