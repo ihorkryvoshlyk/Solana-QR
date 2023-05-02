@@ -33,6 +33,7 @@ type ErrorOutput = {
 }
 
 function get(res: NextApiResponse<MakeTransactionGetResponse>) {
+  console.log('get request')
   res.status(200).json({
     label: 'Cookies Inc',
     icon: 'https://freesvg.org/img/1370962427.png',
@@ -43,6 +44,7 @@ export async function post(
   req: NextApiRequest,
   res: NextApiResponse<MakeTransactionOutputData | ErrorOutput>
 ) {
+  console.log('post request')
   try {
     const token = req.query.token as string
     let params
