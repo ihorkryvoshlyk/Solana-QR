@@ -14,6 +14,11 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { decrypt } from '../../lib/openssl_crypto'
 import { usdcAddress } from '../../lib/addresses'
 
+type MakeTransactionGetResponse = {
+  label: string
+  icon: string
+}
+
 export type MakeTransactionInputData = {
   account: string
 }
@@ -27,7 +32,14 @@ type ErrorOutput = {
   error: string
 }
 
-export default async function handler(
+function get(res: NextApiResponse<MakeTransactionGetResponse>) {
+  res.status(200).json({
+    label: 'Cookies Inc',
+    icon: 'https://freesvg.org/img/1370962427.png',
+  })
+}
+
+export async function post(
   req: NextApiRequest,
   res: NextApiResponse<MakeTransactionOutputData | ErrorOutput>
 ) {
@@ -173,5 +185,20 @@ export default async function handler(
 
     res.status(500).json({ error: 'error creating transaction' })
     return
+  }
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<
+    MakeTransactionGetResponse | MakeTransactionOutputData | ErrorOutput
+  >
+) {
+  if (req.method === 'GET') {
+    return get(res)
+  } else if (req.method === 'POST') {
+    return await post(req, res)
+  } else {
+    return res.status(405).json({ error: 'Method not allowed' })
   }
 }
