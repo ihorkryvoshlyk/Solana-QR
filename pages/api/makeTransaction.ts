@@ -92,6 +92,7 @@ export async function post(
 
     // We pass the buyer's public key in JSON body
     const { account } = req.body as MakeTransactionInputData
+    console.log(account)
     if (!account) {
       console.log('no account')
       res.status(400).json({ error: 'No account provided' })
