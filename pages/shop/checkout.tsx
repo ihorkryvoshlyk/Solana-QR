@@ -1,102 +1,99 @@
-import { createQR, encodeURL, EncodeURLComponents, findTransactionSignature, FindTransactionSignatureError, validateTransactionSignature, ValidateTransactionSignatureError } from "@solana/pay";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
-import { clusterApiUrl, Connection, Keypair } from "@solana/web3.js";
-import BigNumber from "bignumber.js";
-import { time } from "console";
-import { useRouter } from "next/router";
-import { useEffect, useMemo, useRef } from "react";
-import BackLink from "../../components/BackLink";
-import PageHeading from "../../components/PageHeading";
-import { shopAddress, usdcAddress } from "../../lib/addresses";
-import calculatePrice from "../../lib/calculatePrice";
+import { useRouter } from 'next/router'
+import { useEffect, useMemo, useState } from 'react'
+import { TransactionRequestURLFields } from '@solana/pay'
+import { Keypair } from '@solana/web3.js'
+import BigNumber from 'bignumber.js'
+import BackLink from '../../components/BackLink'
+import PageHeading from '../../components/PageHeading'
+import QrCode from '../../components/QrCode'
+import { encrypt, decrypt } from '../../lib/openssl_crypto'
 
 export default function Checkout() {
   const router = useRouter()
+  const [urlParams, setUrlParams] = useState<TransactionRequestURLFields>()
 
-  // ref to a div where we'll show the QR code
-  const qrRef = useRef<HTMLDivElement>(null)
+  const { token } = router.query
+  const params = useMemo(() => {
+    if (token) {
+      const tokenString = String(token).trim().replaceAll(' ', '+')
+      return JSON.parse(decrypt(tokenString as string))
+    } else {
+      return router.query
+    }
+  }, [router.query])
 
-  const amount = useMemo(() => calculatePrice(router.query), [router.query])
+  useEffect(() => {
+    if (params) {
+      const {
+        box_of_cookies,
+        basket_of_cookies,
+        recipient,
+        label,
+        recipient1,
+        percent,
+        percent1,
+        amount,
+        country,
+        city,
+        secret,
+      } = params
 
-  // Unique address that we can listen for payments to
+      console.log(box_of_cookies)
+      console.log(basket_of_cookies)
+      console.log(reference)
+      console.log(recipient)
+      console.log(label)
+      console.log(recipient1)
+      console.log(percent1)
+      console.log(amount)
+      console.log(country)
+      console.log(city)
+      console.log(secret)
+    }
+  }, [params])
+
+  const amount = useMemo(() => {
+    return new BigNumber(params.amount)
+  }, [params])
+
+  // Generate the unique reference which will be used for this transaction
   const reference = useMemo(() => Keypair.generate().publicKey, [])
 
-  // Get a connection to Solana devnet
-  const network = WalletAdapterNetwork.Devnet
-  const endpoint = clusterApiUrl(network)
-  const connection = new Connection(endpoint)
-
-  // Solana Pay transfer params
-  const urlParams: EncodeURLComponents = {
-    recipient: shopAddress,
-    splToken: usdcAddress,
-    amount,
-    reference,
-    label: 'Cookies Inc',
-    message: 'Thanks for your order! 🍪 ',
-  }
-
-  // Encode the params into the format shown
-  const url = encodeURL(urlParams)
-  console.log({ url })
-
-  // Show the QR code
   useEffect(() => {
-    const qr = createQR(url, 512, 'transparent')
-    if (qrRef.current && amount.isGreaterThan(0)) {
-      qrRef.current.innerHTML = ''
-      qr.append(qrRef.current)
+    const tokenString = encrypt(
+      JSON.stringify({
+        ...params,
+        reference,
+      })
+    )
+    const { location } = window
+    const apiUrl = `${location.protocol}//${location.host}//api/makeTransaction?token=${tokenString}`
+    const transactionUrl: TransactionRequestURLFields = {
+      link: new URL(apiUrl),
+      label: params.label,
+      message: 'Thanks for your order! 🍪',
     }
-  })
-
-  // Check every 0.5s if the transaction is completed
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        // Check if there is any transaction for the reference
-        const signatureInfo = await findTransactionSignature(
-          connection,
-          reference,
-          {},
-          'confirmed' //If you’re dealing with really big transactions you might prefer to use 'finalized' instead 'confirmed'. 
-        )
-        // Validate that the transaction has the expected recipient, amount and SPL token
-        await validateTransactionSignature(
-          connection,
-          signatureInfo.signature,
-          shopAddress,
-          amount,
-          usdcAddress,
-          reference,
-          'confirmed'
-        )
-        router.push('/shop/confirmed')
-      } catch (e) {
-        if (e instanceof FindTransactionSignatureError) {
-          // No transaction found yet, ignore this error
-          return
-        }
-        if (e instanceof ValidateTransactionSignatureError) {
-          // Transaction is invalid
-          console.error('Transaction is invalid', e)
-          return
-        }
-        console.error('Unknown error', e)
-      }
-    }, 500)
-    return () => {
-      clearInterval(interval)
-    }
-  }, [])
+    setUrlParams(transactionUrl)
+  }, [params])
 
   return (
     <div className="flex flex-col items-center gap-8">
-      <BackLink href="/shop">Cancel</BackLink>
-
-      <PageHeading>Checkout ${amount.toString()}</PageHeading>
-
-      {/* div added to display the QR code */}
-      <div ref={qrRef} />
+      <div>
+        <BackLink href="/">Cancel</BackLink>
+      </div>
+      <PageHeading>
+        {params.label} ${amount?.toString()}
+      </PageHeading>
+      {urlParams ? (
+        <QrCode
+          urlParams={urlParams}
+          amount={amount}
+          recipient={params.recipient1}
+          reference={reference}
+        />
+      ) : (
+        <p>Invalid URL</p>
+      )}
     </div>
   )
 }

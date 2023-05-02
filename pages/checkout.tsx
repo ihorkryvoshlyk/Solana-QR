@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { TransactionRequestURLFields } from '@solana/pay'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
-import { Keypair, Transaction, PublicKey } from '@solana/web3.js'
+import { Keypair, Transaction } from '@solana/web3.js'
 import BigNumber from 'bignumber.js'
 import BackLink from '../components/BackLink'
 import PageHeading from '../components/PageHeading'
@@ -13,7 +13,6 @@ import {
   MakeTransactionOutputData,
 } from './api/makeTransaction'
 import { encrypt, decrypt } from '../lib/openssl_crypto'
-import { shopAddress, usdcAddress } from '../lib/addresses'
 
 export default function Checkout() {
   const router = useRouter()
