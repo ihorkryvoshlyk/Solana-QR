@@ -183,7 +183,7 @@ export default function Checkout() {
     const apiUrl = `https://solana-qr.onrender.com/api/makeTransaction?token=${tokenString}`
     const transactionUrl: TransactionRequestURLFields = {
       link: new URL(apiUrl),
-      label: params.label,
+      label: 'Cookies Inc',
       message: 'Thanks for your order! 🍪',
     }
     setUrlParams(transactionUrl)
