@@ -172,7 +172,7 @@ export async function post(
 
     // Add the instruction to the transaction
     transaction.add(transferInstructionOne)
-    // transaction.add(transferInstructionTwo)
+    transaction.add(transferInstructionTwo)
 
     // Serialize the transaction and convert to base64 to return it
     const serializedTransaction = transaction.serialize({
