@@ -92,7 +92,7 @@ export async function post(
 
     // We pass the buyer's public key in JSON body
     const { account } = req.body as MakeTransactionInputData
-    console.log(account)
+    console.log('accunt=============>', account)
     if (!account) {
       console.log('no account')
       res.status(400).json({ error: 'No account provided' })
@@ -124,6 +124,9 @@ export async function post(
       usdcAddress,
       shopPublicKeyTwo
     )
+
+    console.log('shop address one ======>', shopUsdcAddressOne)
+    console.log('shop address two ======>', shopUsdcAddressTwo)
 
     // Get a recent blockhash to include in the transaction
     const { blockhash } = await connection.getLatestBlockhash('finalized')
