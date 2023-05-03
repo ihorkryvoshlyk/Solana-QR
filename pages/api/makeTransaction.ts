@@ -161,13 +161,13 @@ export async function post(
     transferInstructionOne.keys.push({
       pubkey: new PublicKey(reference),
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
     })
 
     transferInstructionTwo.keys.push({
       pubkey: new PublicKey(reference),
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
     })
 
     // Add the instruction to the transaction
