@@ -131,11 +131,7 @@ export async function post(
     // Get a recent blockhash to include in the transaction
     const { blockhash } = await connection.getLatestBlockhash('finalized')
 
-    const transaction = new Transaction({
-      recentBlockhash: blockhash,
-      // The buyer pays the transaction fee
-      feePayer: buyerPublicKey,
-    })
+    const transaction = new Transaction()
 
     // Create the instruction to send USDC from the buyer to the shop
     const transferInstructionOne = createTransferCheckedInstruction(
