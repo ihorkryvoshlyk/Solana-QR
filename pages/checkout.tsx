@@ -23,7 +23,7 @@ export interface Transfer {
 export default function Checkout() {
   const router = useRouter()
   const { connection } = useConnection()
-  const { publicKey, sendTransaction } = useWallet()
+  const { publicKey, sendTransaction, disconnect } = useWallet()
   // State to hold API response fields
   const [transaction, setTransaction] = useState<Transaction | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -173,6 +173,7 @@ export default function Checkout() {
 
     if (response.status !== 200) {
       console.error(json)
+      disconnect()
       return
     }
 
@@ -212,11 +213,10 @@ export default function Checkout() {
       }
       handleSignatureStatus(signature)
     } catch (error) {
+      disconnect()
       console.log(error)
     }
   }
-
-  console.log(transfers)
 
   // useEffect(() => {
   //   const tokenString = encrypt(
@@ -243,6 +243,7 @@ export default function Checkout() {
       const signature = await sendTransaction(transaction, connection)
       handleSignatureStatus(signature)
     } catch (e) {
+      disconnect()
       console.error(e)
     }
   }
@@ -252,13 +253,12 @@ export default function Checkout() {
     trySendTransaction()
   }, [transaction])
 
-  const handleClickPayWallet = () => {
-    if (!publicKey) {
-      alert('Please select wallet before pay')
-    } else {
-      getTransaction()
-    }
-  }
+  useEffect(() => {
+    getTransaction()
+    console.log('change public key')
+  }, [publicKey])
+
+  console.log(publicKey)
 
   const handleClickCreateQR = () => {
     setCreatedQrCode(true)
@@ -272,14 +272,8 @@ export default function Checkout() {
       <PageHeading>
         {params.label} ${amount?.toString()}
       </PageHeading>
-      <WalletMultiButton />
+      <WalletMultiButton>Pay Online Wallet</WalletMultiButton>
 
-      <button
-        className="rounded-md bg-violet-500 py-2 px-3 text-lg font-semibold text-white shadow hover:bg-violet-600 focus:outline-none focus:outline-none focus:ring focus:ring-violet-300 active:bg-violet-700"
-        onClick={handleClickPayWallet}
-      >
-        Pay Online Wallet
-      </button>
       {params.qrcode === 'no' ? (
         <></>
       ) : (
