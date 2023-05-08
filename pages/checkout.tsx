@@ -272,7 +272,11 @@ export default function Checkout() {
       <PageHeading>
         {params.label} ${amount?.toString()}
       </PageHeading>
-      <WalletMultiButton>Pay Online Wallet</WalletMultiButton>
+      <div className="rounded-md bg-violet-500 text-lg font-semibold text-white shadow hover:bg-violet-600 focus:outline-none focus:outline-none focus:ring focus:ring-violet-300 active:bg-violet-700">
+        <WalletMultiButton className="bg-violet-500">
+          Pay Online Wallet
+        </WalletMultiButton>
+      </div>
 
       {params.qrcode === 'no' ? (
         <></>
