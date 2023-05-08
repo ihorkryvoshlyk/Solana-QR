@@ -33,7 +33,6 @@ type ErrorOutput = {
 }
 
 function get(res: NextApiResponse<MakeTransactionGetResponse>) {
-  console.log('get request')
   res.status(200).json({
     label: 'Cookies Inc',
     icon: 'https://freesvg.org/img/1370962427.png',
@@ -44,7 +43,6 @@ export async function post(
   req: NextApiRequest,
   res: NextApiResponse<MakeTransactionOutputData | ErrorOutput>
 ) {
-  console.log('post request')
   try {
     const token = req.query.token as string
     let params
@@ -85,28 +83,20 @@ export async function post(
     console.log(secret)
 
     if (!reference) {
-      console.log('no reference')
       res.status(400).json({ error: 'No reference provided' })
       return
     }
 
     // We pass the buyer's public key in JSON body
     const { account } = req.body as MakeTransactionInputData
-    console.log('accunt=============>', account)
     if (!account) {
-      console.log('no account')
       res.status(400).json({ error: 'No account provided' })
       return
     }
-
     const buyerPublicKey = new PublicKey(account)
-    const shopPublicKeyOne = new PublicKey(recipient)
-    const shopPublicKeyTwo = new PublicKey(recipient1)
-
     const network = WalletAdapterNetwork.Devnet
     const endpoint = clusterApiUrl(network)
     const connection = new Connection(endpoint)
-
     // Get details about the USDC token
     const usdcMint = await getMint(connection, usdcAddress)
     // Get the buyer's USDC token account address
@@ -114,19 +104,6 @@ export async function post(
       usdcAddress,
       buyerPublicKey
     )
-    // Get the shop's USDC token account address
-    const shopUsdcAddressOne = await getAssociatedTokenAddress(
-      usdcAddress,
-      shopPublicKeyOne
-    )
-
-    const shopUsdcAddressTwo = await getAssociatedTokenAddress(
-      usdcAddress,
-      shopPublicKeyTwo
-    )
-
-    console.log('shop address one ======>', shopUsdcAddressOne)
-    console.log('shop address two ======>', shopUsdcAddressTwo)
 
     // Get a recent blockhash to include in the transaction
     const { blockhash } = await connection.getLatestBlockhash('finalized')
@@ -137,42 +114,56 @@ export async function post(
       feePayer: buyerPublicKey,
     })
 
-    // Create the instruction to send USDC from the buyer to the shop
-    const transferInstructionOne = createTransferCheckedInstruction(
-      buyerUsdcAddress, // source
-      usdcAddress, // mint (token address)
-      shopUsdcAddressOne, // destination
-      buyerPublicKey, // owner of source address
-      Math.floor(amount * 10 ** usdcMint.decimals * percent), // amount to transfer (in units of the USDC token)
-      usdcMint.decimals // decimals of the USDC token
-    )
+    if (recipient) {
+      const shopPublicKeyOne = new PublicKey(recipient)
+      // Get the shop's USDC token account address
+      const shopUsdcAddressOne = await getAssociatedTokenAddress(
+        usdcAddress,
+        shopPublicKeyOne
+      )
 
-    const transferInstructionTwo = createTransferCheckedInstruction(
-      buyerUsdcAddress, // source
-      usdcAddress, // mint (token address)
-      shopUsdcAddressTwo, // destination
-      buyerPublicKey, // owner of source address
-      Math.floor(amount * 10 ** usdcMint.decimals * percent1), // amount to transfer (in units of the USDC token)
-      usdcMint.decimals // decimals of the USDC token
-    )
+      // Create the instruction to send USDC from the buyer to the shop
+      const transferInstructionOne = createTransferCheckedInstruction(
+        buyerUsdcAddress, // source
+        usdcAddress, // mint (token address)
+        shopUsdcAddressOne, // destination
+        buyerPublicKey, // owner of source address
+        Math.floor(amount * 10 ** usdcMint.decimals * (percent || 1)), // amount to transfer (in units of the USDC token)
+        usdcMint.decimals // decimals of the USDC token
+      )
+      // This will mean this transaction is returned when we query for the reference
+      transferInstructionOne.keys.push({
+        pubkey: new PublicKey(reference),
+        isSigner: false,
+        isWritable: false,
+      })
+      transaction.add(transferInstructionOne)
+    }
 
-    // Add the reference to the instruction as a key
-    // This will mean this transaction is returned when we query for the reference
-    transferInstructionOne.keys.push({
-      pubkey: new PublicKey(reference),
-      isSigner: false,
-      isWritable: false,
-    })
+    if (recipient1) {
+      const shopPublicKeyTwo = new PublicKey(recipient1)
 
-    transferInstructionTwo.keys.push({
-      pubkey: new PublicKey(reference),
-      isSigner: false,
-      isWritable: false,
-    })
+      const shopUsdcAddressTwo = await getAssociatedTokenAddress(
+        usdcAddress,
+        shopPublicKeyTwo
+      )
 
-    // Add the instruction to the transaction
-    transaction.add(transferInstructionOne)
-    transaction.add(transferInstructionTwo)
+      const transferInstructionTwo = createTransferCheckedInstruction(
+        buyerUsdcAddress, // source
+        usdcAddress, // mint (token address)
+        shopUsdcAddressTwo, // destination
+        buyerPublicKey, // owner of source address
+        Math.floor(amount * 10 ** usdcMint.decimals * (percent1 || 0)), // amount to transfer (in units of the USDC token)
+        usdcMint.decimals // decimals of the USDC token
+      )
+
+      transferInstructionTwo.keys.push({
+        pubkey: new PublicKey(reference),
+        isSigner: false,
+        isWritable: false,
+      })
+      transaction.add(transferInstructionTwo)
+    }
 
     // Serialize the transaction and convert to base64 to return it
     const serializedTransaction = transaction.serialize({
@@ -182,8 +173,6 @@ export async function post(
     const base64 = serializedTransaction.toString('base64')
 
     // Insert into database: reference, amount
-
-    console.log('make transaction success')
 
     // Return the serialized transaction
     res.status(200).json({

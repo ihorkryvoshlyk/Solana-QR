@@ -1,9 +1,8 @@
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
-import { TransactionRequestURLFields } from '@solana/pay'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
-import { Keypair, Transaction } from '@solana/web3.js'
+import { Keypair, Transaction, PublicKey } from '@solana/web3.js'
 import BigNumber from 'bignumber.js'
 import BackLink from '../components/BackLink'
 import PageHeading from '../components/PageHeading'
@@ -13,6 +12,13 @@ import {
   MakeTransactionOutputData,
 } from './api/makeTransaction'
 import { encrypt, decrypt } from '../lib/openssl_crypto'
+import { usdcAddress } from '../lib/addresses'
+
+export interface Transfer {
+  recipient: string
+  amount: number
+  isValidate?: boolean
+}
 
 export default function Checkout() {
   const router = useRouter()
@@ -22,7 +28,7 @@ export default function Checkout() {
   const [transaction, setTransaction] = useState<Transaction | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [createdQrCode, setCreatedQrCode] = useState(false)
-  const [urlParams, setUrlParams] = useState<TransactionRequestURLFields>()
+  const [transfers, setTransfers] = useState<Transfer[]>([])
 
   const { token } = router.query
   const params = useMemo(() => {
@@ -52,7 +58,6 @@ export default function Checkout() {
 
       console.log(box_of_cookies)
       console.log(basket_of_cookies)
-      console.log(reference)
       console.log(recipient)
       console.log(label)
       console.log(recipient1)
@@ -68,11 +73,50 @@ export default function Checkout() {
     return new BigNumber(params.amount)
   }, [params])
 
-  // Generate the unique reference which will be used for this transaction
-  const reference = useMemo(() => Keypair.generate().publicKey, [])
+  useEffect(() => {
+    let trans: Transfer[] = []
+    if (params.recipient) {
+      trans.push({
+        recipient: params.recipient,
+        amount: params.amount * (params.percent || 1),
+      })
+    }
+    if (params.recipient1) {
+      trans.push({
+        recipient: params.recipient1,
+        amount: params.amount * (params.percent1 || 0),
+      })
+    }
+    setTransfers(trans)
+  }, [params])
+
+  const handleValidateTransfer = (recipient: string) => {
+    setTransfers((prevTrans) =>
+      prevTrans.map((trans) => {
+        if (trans.recipient === recipient) {
+          return {
+            ...trans,
+            isValidate: true,
+          }
+        } else {
+          return trans
+        }
+      })
+    )
+  }
+
+  useEffect(() => {
+    if (
+      transfers.length !== 0 &&
+      transfers.filter((trans) => !trans.isValidate).length === 0
+    ) {
+      router.push('/confirmed')
+    }
+  }, [transfers])
 
   // Use our API to fetch the transaction for the selected items
   async function getTransaction() {
+    const reference = Keypair.generate().publicKey
     if (!publicKey || !params) {
       return
     }
@@ -172,22 +216,24 @@ export default function Checkout() {
     }
   }
 
-  useEffect(() => {
-    const tokenString = encrypt(
-      JSON.stringify({
-        ...params,
-        reference,
-      })
-    )
-    const { location } = window
-    const apiUrl = `https://solana-qr.onrender.com/api/makeTransaction?token=${tokenString}`
-    const transactionUrl: TransactionRequestURLFields = {
-      link: new URL(apiUrl),
-      label: 'Cookies Inc',
-      message: 'Thanks for your order! 🍪',
-    }
-    setUrlParams(transactionUrl)
-  }, [params])
+  console.log(transfers)
+
+  // useEffect(() => {
+  //   const tokenString = encrypt(
+  //     JSON.stringify({
+  //       ...params,
+  //       reference,
+  //     })
+  //   )
+  //   const { location } = window
+  //   const apiUrl = `https://solana-qr.onrender.com/api/makeTransaction?token=${tokenString}`
+  //   const transactionUrl: TransactionRequestURLFields = {
+  //     link: new URL(apiUrl),
+  //     label: 'Cookies Inc',
+  //     message: 'Thanks for your order! 🍪',
+  //   }
+  //   setUrlParams(transactionUrl)
+  // }, [params])
 
   async function trySendTransaction() {
     if (!transaction) {
@@ -234,25 +280,31 @@ export default function Checkout() {
       >
         Pay Online Wallet
       </button>
-
-      {!createdQrCode ? (
-        <button
-          className="rounded-md bg-violet-500 py-2 px-3 text-lg font-semibold text-white shadow hover:bg-violet-600 focus:outline-none focus:outline-none focus:ring focus:ring-violet-300 active:bg-violet-700"
-          onClick={handleClickCreateQR}
-        >
-          Create QR Code
-        </button>
+      {params.qrcode === 'no' ? (
+        <></>
       ) : (
         <>
-          {urlParams ? (
-            <QrCode
-              urlParams={urlParams}
-              amount={amount}
-              recipient={params.recipient1}
-              reference={reference}
-            />
+          {!createdQrCode ? (
+            <button
+              className="rounded-md bg-violet-500 py-2 px-3 text-lg font-semibold text-white shadow hover:bg-violet-600 focus:outline-none focus:outline-none focus:ring focus:ring-violet-300 active:bg-violet-700"
+              onClick={handleClickCreateQR}
+            >
+              Create QR Code
+            </button>
           ) : (
-            <p>Invalid URL</p>
+            <div className="flex flex-row">
+              {transfers.map((trans) => (
+                <QrCode
+                  key={trans.recipient}
+                  onValidateTransfer={handleValidateTransfer}
+                  recipient={new PublicKey(trans.recipient)}
+                  splToken={usdcAddress}
+                  amount={new BigNumber(trans.amount)}
+                  label={params.label}
+                  message={params.message}
+                />
+              ))}
+            </div>
           )}
         </>
       )}
@@ -260,7 +312,7 @@ export default function Checkout() {
       {message ? (
         <p>{message} Please approve the transaction using your wallet</p>
       ) : (
-        <p>Please select payment method</p>
+        <></>
       )}
     </div>
   )
