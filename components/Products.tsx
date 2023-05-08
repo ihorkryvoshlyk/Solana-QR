@@ -18,7 +18,7 @@ export default function Products({ submitTarget, enabled }: Props) {
   const formRef = useRef<HTMLFormElement>(null)
   const [productAmounts, setProductAmounts] = useState<ProductAmounts>({
     recipient: '2JNpex2erkE3MrGgVc56raugEARsEGResZCH95pskBXU',
-    label: '1 Month Membrship',
+    label: '1 Month Membership',
     recipient1: '8RZrsjy6CGYn1WpcHkZD1MenAKHVAGtBZPCMkRpzprs5',
     percent: 0.8,
     percent1: 0.2,

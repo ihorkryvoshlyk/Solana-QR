@@ -131,7 +131,6 @@ export default function Checkout() {
         JSON.stringify({
           ...params,
           reference,
-          account: publicKey.toString(),
         })
       )
 
@@ -140,6 +139,7 @@ export default function Checkout() {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(body),
       })
     } else {
       const searchParams = new URLSearchParams()
